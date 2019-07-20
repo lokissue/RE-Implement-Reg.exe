@@ -51,6 +51,7 @@ void QueryKey( HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
     FILETIME ftLastWriteTime;        // last write time
 
     DWORD i, retCode;
+    TCHAR  achValue[MAX_VALUE_NAME];
 
     DWORD cchValue = MAX_VALUE_NAME;
 
@@ -117,7 +118,7 @@ void QueryKey( HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
 
     // Enumerate the key values.
 
-    /*if (cValues)
+    if (cValues)
     {
          printf( "\nNumber of values: %d\n", cValues);
 
@@ -140,5 +141,6 @@ void QueryKey( HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
                     _tprintf(TEXT("(%d) %s\n"), i+1, achValue);
               }
          }
-    }*/
+    }
 }
+
