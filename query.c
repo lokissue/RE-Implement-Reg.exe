@@ -1,3 +1,7 @@
+/*
+
+https://github.com/NTDLS/NSWFL/blob/master/NSWFL_Registry.Cpp
+ */
 #include <windows.h>
 #include <stdio.h>
 #include <tchar.h>
@@ -24,8 +28,8 @@ void __cdecl _tmain(int argc, char* argv[])
 
     printf("%s\n", argv[2]);
     // char pathCopy[MAX_VALUE_NAME];
-    char pathCopy[MAX_VALUE_NAME];
-    char subpath[MAX_VALUE_NAME];
+    char pathCopy[MAX_PATH];
+    char subpath[MAX_PATH];
     strcpy(pathCopy, argv[2]);
     char* hive = strtok(argv[2], "\\");
     sprintf(subpath, "%s", pathCopy + strlen(hive) + 1);
@@ -37,7 +41,7 @@ void __cdecl _tmain(int argc, char* argv[])
     HKEY regHive;
     if(!strcmp(strupr(hive), "HKEY_LOCAL_MACHINE")){
       regHive = HKEY_LOCAL_MACHINE;
-      wchar_t wszSubPath[MAX_VALUE_NAME];
+      wchar_t wszSubPath[MAX_PATH];
       mbstowcs(wszSubPath, subpath, sizeof(subpath));
       query(regHive, wszSubPath, 0);
 
