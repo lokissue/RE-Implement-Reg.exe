@@ -44,7 +44,7 @@ void __cdecl _tmain(int argc, char* argv[])
       //test(regHive, L"hardware\\description\\system", 0);
     }else{
       regHive = HKEY_CURRENT_USER;
-      test(regHive, L"software\\mircrosoft\\system\\mircrosoft\\wisp", 0);
+      test(regHive, L"software\\microsoft\\wisp", 0);
     }
 
     return;
