@@ -3,37 +3,71 @@
 #include <tchar.h>
 #include <conio.h>
 
+
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 
-void test( wchar_t * OriginalCopy, DWORD Level );
-void QueryKey(HKEY hKey, const wchar_t * proba, DWORD Level );
+/* Sample call "sim query HKEY_LOCAL_MACHINE\hardware\description\system"*/
+
+void test(HKEY Hive, wchar_t * OriginalCopy, DWORD Level );
+void QueryKey(HKEY regHive, HKEY hKey, const wchar_t * proba, DWORD Level );
 
 
 int counter = 0;
 
-void __cdecl _tmain(void)
+void __cdecl _tmain(int argc, char* argv[])
 {
 
-    test( L"hardware\\description\\system", 0);
+    // HKEY regHive = HKEY_LOCAL_MACHINE;
+    // test(regHive, L"hardware\\description\\system", 0);
 
+
+    printf("%s\n", argv[2]);
+    // char pathCopy[MAX_VALUE_NAME];
+    char pathCopy[MAX_VALUE_NAME];
+    char path[MAX_VALUE_NAME];
+    strcpy(pathCopy, argv[2]);
+    char* hive = strtok(argv[2], "\\");
+    sprintf(path, "%s", pathCopy + strlen(hive) + 1);
+
+
+    printf("%s,%s \n", hive, path);
+
+    printf("%s | %s %d\n", hive, path, strcmp(strupr(hive), "HKEY_LOCAL_MACHINE"));
+    HKEY regHive;
+    if(!strcmp(strupr(hive), "HKEY_LOCAL_MACHINE")){
+      regHive = HKEY_LOCAL_MACHINE;
+      wchar_t wszPath[MAX_VALUE_NAME];
+      mbstowcs(wszPath, path, sizeof(path));
+      test(regHive, wszPath, 0);
+
+      //test(regHive, L"hardware\\description\\system", 0);
+    }else{
+      regHive = HKEY_CURRENT_USER;
+      test(regHive, L"software\\mircrosoft\\system\\mircrosoft\\wisp", 0);
+    }
+
+    return;
+
+      // HKEY regHive = HKEY_CURRENT_USER;
+      // test(regHive, L"software\\microsoft\\wisp", 0);
 }
 
-void test(wchar_t * OriginalCopy, DWORD Level)
+void test(HKEY regHive, wchar_t * OriginalCopy, DWORD Level)
 {
     HKEY hTestKey;
 
-    if ( RegOpenKeyExW( HKEY_LOCAL_MACHINE, (LPCWSTR)OriginalCopy, 0, KEY_READ, &hTestKey ) == ERROR_SUCCESS )
+    if ( RegOpenKeyExW( regHive, (LPCWSTR)OriginalCopy, 0, KEY_READ, &hTestKey ) == ERROR_SUCCESS )
     {
         printf("\n%ls",OriginalCopy);
-        QueryKey(hTestKey, OriginalCopy, Level + 1 );
+        QueryKey(regHive, hTestKey, OriginalCopy, Level + 1 );
     }
     else printf("\nTest Failed");
     RegCloseKey(hTestKey);
 
 }
 
-void QueryKey( HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
+void QueryKey(HKEY regHive, HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
 {
     //printf("\n1. OriginalCopy: %ls Level %d", OriginalCopy, Level );
 
@@ -102,10 +136,10 @@ void QueryKey( HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
                 //printf("\nNew subkey found \"%ls\" Number of subkeys: %d\n",achKey, cSubKeys);
                 printf("\nNew OriginalCopy \"%ls\"Level: %d\n", NewCopy, Level);
 
-                if ( RegOpenKeyExW( HKEY_LOCAL_MACHINE, OriginalCopy, 0, KEY_READ, &subkey ) == ERROR_SUCCESS )
+                if ( RegOpenKeyExW( regHive, OriginalCopy, 0, KEY_READ, &subkey ) == ERROR_SUCCESS )
                 {
                     counter++;
-                    test( NewCopy, Level + 1 );
+                    test(regHive, NewCopy, Level + 1 );
                     RegCloseKey( subkey );
                 }
                 else printf("\n-----Querykey Failed for %ls\n",OriginalCopy );
@@ -143,4 +177,3 @@ void QueryKey( HKEY hKey, const wchar_t * OriginalCopy, DWORD Level )
          }
     }
 }
-
