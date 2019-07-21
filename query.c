@@ -9,7 +9,7 @@
 
 /* Sample call "sim query HKEY_LOCAL_MACHINE\hardware\description\system"*/
 
-void test(HKEY Hive, wchar_t * OriginalCopy, DWORD Level );
+void query(HKEY Hive, wchar_t * OriginalCopy, DWORD Level );
 void QueryKey(HKEY regHive, HKEY hKey, const wchar_t * proba, DWORD Level );
 
 
@@ -19,51 +19,51 @@ void __cdecl _tmain(int argc, char* argv[])
 {
 
     // HKEY regHive = HKEY_LOCAL_MACHINE;
-    // test(regHive, L"hardware\\description\\system", 0);
+    // query(regHive, L"hardware\\description\\system", 0);
 
 
     printf("%s\n", argv[2]);
     // char pathCopy[MAX_VALUE_NAME];
     char pathCopy[MAX_VALUE_NAME];
-    char path[MAX_VALUE_NAME];
+    char subpath[MAX_VALUE_NAME];
     strcpy(pathCopy, argv[2]);
     char* hive = strtok(argv[2], "\\");
-    sprintf(path, "%s", pathCopy + strlen(hive) + 1);
+    sprintf(subpath, "%s", pathCopy + strlen(hive) + 1);
 
 
-    printf("%s,%s \n", hive, path);
+    printf("%s,%s \n", hive, subpath);
 
-    printf("%s | %s %d\n", hive, path, strcmp(strupr(hive), "HKEY_LOCAL_MACHINE"));
+    printf("%s | %s %d\n", hive, subpath, strcmp(strupr(hive), "HKEY_LOCAL_MACHINE"));
     HKEY regHive;
     if(!strcmp(strupr(hive), "HKEY_LOCAL_MACHINE")){
       regHive = HKEY_LOCAL_MACHINE;
-      wchar_t wszPath[MAX_VALUE_NAME];
-      mbstowcs(wszPath, path, sizeof(path));
-      test(regHive, wszPath, 0);
+      wchar_t wszSubPath[MAX_VALUE_NAME];
+      mbstowcs(wszSubPath, subpath, sizeof(subpath));
+      query(regHive, wszSubPath, 0);
 
-      //test(regHive, L"hardware\\description\\system", 0);
+      //query(regHive, L"hardware\\description\\system", 0);
     }else{
       regHive = HKEY_CURRENT_USER;
-      test(regHive, L"software\\microsoft\\wisp", 0);
+      query(regHive, L"software\\microsoft\\wisp", 0);
     }
 
     return;
 
       // HKEY regHive = HKEY_CURRENT_USER;
-      // test(regHive, L"software\\microsoft\\wisp", 0);
+      // query(regHive, L"software\\microsoft\\wisp", 0);
 }
 
-void test(HKEY regHive, wchar_t * OriginalCopy, DWORD Level)
+void query(HKEY regHive, wchar_t * OriginalCopy, DWORD Level)
 {
-    HKEY hTestKey;
+    HKEY hqueryKey;
 
-    if ( RegOpenKeyExW( regHive, (LPCWSTR)OriginalCopy, 0, KEY_READ, &hTestKey ) == ERROR_SUCCESS )
+    if ( RegOpenKeyExW( regHive, (LPCWSTR)OriginalCopy, 0, KEY_READ, &hqueryKey ) == ERROR_SUCCESS )
     {
-        printf("\n%ls",OriginalCopy);
-        QueryKey(regHive, hTestKey, OriginalCopy, Level + 1 );
+        printf("\n%ls\n",OriginalCopy);
+        QueryKey(regHive, hqueryKey, OriginalCopy, Level + 1 );
     }
-    else printf("\nTest Failed");
-    RegCloseKey(hTestKey);
+    else printf("\nquery Failed");
+    RegCloseKey(hqueryKey);
 
 }
 
@@ -134,12 +134,12 @@ void QueryKey(HKEY regHive, HKEY hKey, const wchar_t * OriginalCopy, DWORD Level
                 wcscat( NewCopy, L"\\" );
                 wcscat( NewCopy, (const wchar_t *)achKey);
                 //printf("\nNew subkey found \"%ls\" Number of subkeys: %d\n",achKey, cSubKeys);
-                printf("\nNew OriginalCopy \"%ls\"Level: %d\n", NewCopy, Level);
+                //printf("\nNew OriginalCopy \"%ls\"Level: %d\n", NewCopy, Level);
 
                 if ( RegOpenKeyExW( regHive, OriginalCopy, 0, KEY_READ, &subkey ) == ERROR_SUCCESS )
                 {
                     counter++;
-                    test(regHive, NewCopy, Level + 1 );
+                    query(regHive, NewCopy, Level + 1 );
                     RegCloseKey( subkey );
                 }
                 else printf("\n-----Querykey Failed for %ls\n",OriginalCopy );
@@ -152,7 +152,7 @@ void QueryKey(HKEY regHive, HKEY hKey, const wchar_t * OriginalCopy, DWORD Level
 
     // Enumerate the key values.
 
-    if (cValues)
+    /*if (cValues)
     {
          printf( "\nNumber of values: %d\n", cValues);
 
@@ -175,5 +175,6 @@ void QueryKey(HKEY regHive, HKEY hKey, const wchar_t * OriginalCopy, DWORD Level
                     _tprintf(TEXT("(%d) %s\n"), i+1, achValue);
               }
          }
-    }
+    } */
 }
+
