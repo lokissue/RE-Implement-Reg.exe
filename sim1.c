@@ -18,39 +18,70 @@ https://www.tenouk.com/cpluscodesnippet/createregistrysubkeysnamesvalues.html
 void query(HKEY Hive, wchar_t * OriginalCopy, DWORD Level );
 void QueryKey(HKEY hKeyRoot, HKEY hKey, const wchar_t * proba, DWORD Level );
 bool CreateRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey);
+bool Set_BinaryRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, PVOID pData, DWORD dwSize);
+bool Set_DWORDRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, unsigned long ulValue);
+bool Set_StringRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, LPCTSTR pszString);
+bool DeleteRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey);
 
 int counter = 0;
 
 void __cdecl _tmain(int argc, char* argv[])
 {
 
-
-    printf("%s\n", argv[2]);
-
-    char pathCopy[MAX_PATH];
-    char subpath[MAX_PATH];
-    strcpy(pathCopy, argv[2]);
-    char* root = strtok(argv[2], "\\");
-    sprintf(subpath, "%s", pathCopy + strlen(root) + 1);
-
-
-    printf("%s,%s \n", hive, subpath);
-
-    printf("%s | %s %d\n", hive, subpath, strcmp(strupr(root), "HKEY_LOCAL_MACHINE"));
-    HKEY hKeyRoot;
-    if(!strcmp(strupr(root), "HKEY_LOCAL_MACHINE")){
-      hKeyRoot = HKEY_LOCAL_MACHINE;
-      wchar_t wszSubPath[MAX_PATH];
-      mbstowcs(wszSubPath, subpath, sizeof(subpath));
-      query(hKeyRoot, wszSubPath, 0);
-
-      //query(hKeyRoot, L"hardware\\description\\system", 0);
-    }else{
-      hKeyRoot = HKEY_CURRENT_USER;
-      query(hKeyRoot, L"software\\microsoft\\wisp", 0);
-    }
-
+  if(argc < 2){
+    printf("Invaild Input\n");
     return;
+  }
+
+  printf("%s\n", argv[2]);
+
+  char pathCopy[MAX_PATH];
+  char subpath[MAX_PATH];
+  strcpy(pathCopy, argv[2]);
+  char* root = strtok(argv[2], "\\");
+  sprintf(subpath, "%s", pathCopy + strlen(root) + 1);
+
+
+  printf("%s,%s \n", root, subpath);
+
+  printf("%s | %s %d\n", root, subpath, strcmp(strupr(root), "HKEY_LOCAL_MACHINE"));
+
+  HKEY hKeyRoot;
+  if(!strcmp(strupr(root), "HKEY_LOCAL_MACHINE")||!strcmp(strupr(root), "HKLM")){
+    hKeyRoot = HKEY_LOCAL_MACHINE;
+  }else if(!strcmp(strupr(root), "HKEY_CURRENT_USER")||!strcmp(strupr(root), "HKCU"))
+  {
+    hKeyRoot = HKEY_CURRENT_USER;
+  }else if(!strcmp(strupr(root), "HKEY_CLASSES_ROOT")||!strcmp(strupr(root), "HKCR")){
+    hKeyRoot = HKEY_CLASSES_ROOT;
+  }else if(!strcmp(strupr(root), "HKEY_CURRENT_CONFIG")||!strcmp(strupr(root), "HKCC")){
+    hKeyRoot = HKEY_CURRENT_CONFIG;
+  }else if(!strcmp(strupr(root), "HKEY_USERS")||!strcmp(strupr(root), "HKU")){
+    hKeyRoot = HKEY_USERS;
+  }else{
+    printf("Invaild Root Key\n");
+    return;
+  }
+
+  wchar_t wszSubPath[MAX_PATH];
+  mbstowcs(wszSubPath, subpath, sizeof(subpath));
+
+  if(!strcmp(strupr(argv[1]), "ADD")){
+    printf("run add \n");
+    if(argc == 2){
+      CreateRegistryKey(hKeyRoot, (LPCTSTR) wszSubPath);
+    }
+    return;
+  }else if (!strcmp(strupr(argv[1]), "QUERY")){
+    printf("run query \n");
+    query(hKeyRoot, wszSubPath, 0);
+  }else if (!strcmp(strupr(argv[1]), "DELETE")) {
+    printf("run delete \n");
+    DeleteRegistryKey(hKeyRoot, (LPCTSTR) wszSubPath);
+  }else{
+    printf("Invaild Commnand\n");
+  }
+  return;
 }
 
 void query(HKEY hKeyRoot, wchar_t * OriginalCopy, DWORD Level)
@@ -194,92 +225,92 @@ bool CreateRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey)
 }
 
 bool Set_BinaryRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, PVOID pData, DWORD dwSize)
-		{
-			HKEY hKey;
-			LONG lRes = 0;
+{
+	HKEY hKey;
+	LONG lRes = 0;
 
-			lRes = RegOpenKeyEx(hKeyRoot, pszSubKey, 0, KEY_WRITE, &hKey);
+	lRes = RegOpenKeyEx(hKeyRoot, pszSubKey, 0, KEY_WRITE, &hKey);
 
-			if (lRes != ERROR_SUCCESS)
-			{
-				SetLastError(lRes);
-				return false;
-			}
+	if (lRes != ERROR_SUCCESS)
+	{
+		SetLastError(lRes);
+		return false;
+	}
 
-			lRes = RegSetValueEx(hKey, pszValue, 0, REG_BINARY, (unsigned char*)pData, dwSize);
+	lRes = RegSetValueEx(hKey, pszValue, 0, REG_BINARY, (unsigned char*)pData, dwSize);
 
-			RegCloseKey(hKey);
+	RegCloseKey(hKey);
 
-			if (lRes != ERROR_SUCCESS)
-			{
-				SetLastError(lRes);
-				return false;
-			}
+	if (lRes != ERROR_SUCCESS)
+	{
+		SetLastError(lRes);
+		return false;
+	}
 
-			return true;
-		}
-
-		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-		// Writes a DWORD value to the registry
-		bool Set_DWORDRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, unsigned long ulValue)
-		{
-			HKEY hKey;
-			LONG lRes;
-
-			lRes = RegOpenKeyEx(hKeyRoot, pszSubKey, 0, KEY_WRITE, &hKey);
-
-			if (lRes != ERROR_SUCCESS)
-			{
-				SetLastError(lRes);
-				return false;
-			}
-
-			lRes = RegSetValueEx(hKey, pszValue, 0, REG_DWORD, (unsigned char*)&ulValue, sizeof(ulValue));
-
-			RegCloseKey(hKey);
-
-			if (lRes != ERROR_SUCCESS)
-			{
-				SetLastError(lRes);
-				return false;
-			}
-
-			return true;
-		}
-
+	return true;
+}
 
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		// Writes a string to the registry.
-		bool Set_StringRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, LPCTSTR pszString)
-		{
-			HKEY  hKey;
-			LONG  lRes;
-			DWORD dwSize = lstrlen(pszString) * sizeof(TCHAR);
+// Writes a DWORD value to the registry
+bool Set_DWORDRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, unsigned long ulValue)
+{
+	HKEY hKey;
+	LONG lRes;
 
-			lRes = RegOpenKeyEx(hKeyRoot, pszSubKey, 0, KEY_WRITE, &hKey);
+	lRes = RegOpenKeyEx(hKeyRoot, pszSubKey, 0, KEY_WRITE, &hKey);
 
-			if (lRes != ERROR_SUCCESS)
-			{
-				SetLastError(lRes);
-				return false;
-			}
+	if (lRes != ERROR_SUCCESS)
+	{
+		SetLastError(lRes);
+		return false;
+	}
 
-			lRes = RegSetValueEx(hKey, pszValue, 0, REG_SZ, (unsigned char*)pszString, dwSize);
+	lRes = RegSetValueEx(hKey, pszValue, 0, REG_DWORD, (unsigned char*)&ulValue, sizeof(ulValue));
 
-			RegCloseKey(hKey);
+	RegCloseKey(hKey);
 
-			if (lRes != ERROR_SUCCESS)
-			{
-				SetLastError(lRes);
-				return false;
-			}
+	if (lRes != ERROR_SUCCESS)
+	{
+		SetLastError(lRes);
+		return false;
+	}
 
-			return true;
-		}
+	return true;
+}
 
-    bool DeleteRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey)
+
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Writes a string to the registry.
+bool Set_StringRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, LPCTSTR pszString)
+{
+	HKEY  hKey;
+	LONG  lRes;
+	DWORD dwSize = lstrlen(pszString) * sizeof(TCHAR);
+
+	lRes = RegOpenKeyEx(hKeyRoot, pszSubKey, 0, KEY_WRITE, &hKey);
+
+	if (lRes != ERROR_SUCCESS)
+	{
+		SetLastError(lRes);
+		return false;
+	}
+
+	lRes = RegSetValueEx(hKey, pszValue, 0, REG_SZ, (unsigned char*)pszString, dwSize);
+
+	RegCloseKey(hKey);
+
+	if (lRes != ERROR_SUCCESS)
+	{
+		SetLastError(lRes);
+		return false;
+	}
+
+	return true;
+}
+
+bool DeleteRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey)
 {
   DWORD dwRet = ERROR_SUCCESS;
 
