@@ -21,7 +21,8 @@ bool CreateRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey);
 bool Set_BinaryRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, PVOID pData, DWORD dwSize);
 bool Set_DWORDRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, unsigned long ulValue);
 bool Set_StringRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue, LPCTSTR pszString);
-bool DeleteRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey);
+bool RegDelnodeRecurse (HKEY hKeyRoot, LPTSTR lpSubKey);
+bool RegDelnode (HKEY hKeyRoot, LPCTSTR lpSubKey);
 
 int counter = 0;
 
@@ -36,15 +37,15 @@ void __cdecl _tmain(int argc, char* argv[])
   printf("%s\n", argv[2]);
 
   char pathCopy[MAX_PATH];
-  char subpath[MAX_PATH];
+  char lpSubKey[MAX_PATH];
   strcpy(pathCopy, argv[2]);
   char* root = strtok(argv[2], "\\");
-  sprintf(subpath, "%s", pathCopy + strlen(root) + 1);
+  sprintf(lpSubKey, "%s", pathCopy + strlen(root) + 1);
 
 
-  printf("%s,%s \n", root, subpath);
+  printf("%s,%s \n", root, lpSubKey);
 
-  printf("%s | %s %d\n", root, subpath, strcmp(strupr(root), "HKEY_LOCAL_MACHINE"));
+  printf("%s | %s %d\n", root, lpSubKey, strcmp(strupr(root), "HKEY_LOCAL_MACHINE"));
 
   HKEY hKeyRoot;
   if(!strcmp(strupr(root), "HKEY_LOCAL_MACHINE")||!strcmp(strupr(root), "HKLM")){
@@ -63,21 +64,30 @@ void __cdecl _tmain(int argc, char* argv[])
     return;
   }
 
-  wchar_t wszSubPath[MAX_PATH];
-  mbstowcs(wszSubPath, subpath, sizeof(subpath));
+  wchar_t wcsSubKey[MAX_PATH];
+  mbstowcs(wcsSubKey, lpSubKey, sizeof(lpSubKey));
 
   if(!strcmp(strupr(argv[1]), "ADD")){
     printf("run add \n");
     if(argc == 2){
-      CreateRegistryKey(hKeyRoot, (LPCTSTR) wszSubPath);
+      CreateRegistryKey(hKeyRoot, TEXT(lpSubKey));
     }
     return;
   }else if (!strcmp(strupr(argv[1]), "QUERY")){
     printf("run query \n");
-    query(hKeyRoot, wszSubPath, 0);
+    query(hKeyRoot, wcsSubKey, 0);
   }else if (!strcmp(strupr(argv[1]), "DELETE")) {
     printf("run delete \n");
-    DeleteRegistryKey(hKeyRoot, (LPCTSTR) wszSubPath);
+    //RegDelnode(hKeyRoot, TEXT(lpSubKey));
+
+    BOOL bSuccess;
+
+    bSuccess = RegDelnode(hKeyRoot, TEXT(lpSubKey));
+
+    if(bSuccess)
+       printf("Success!\n");
+    else printf("Failure.\n");
+
   }else{
     printf("Invaild Commnand\n");
   }
@@ -310,41 +320,95 @@ bool Set_StringRegistryValue(HKEY hKeyRoot, LPCTSTR pszSubKey, LPCTSTR pszValue,
 	return true;
 }
 
-bool DeleteRegistryKey(HKEY hKeyRoot, LPCTSTR pszSubKey)
+bool RegDelnodeRecurse (HKEY hKeyRoot, LPTSTR lpSubKey)
 {
-  DWORD dwRet = ERROR_SUCCESS;
+    LPTSTR lpEnd;
+    LONG lResult;
+    DWORD dwSize;
+    TCHAR szName[MAX_PATH];
+    HKEY hKey;
+    FILETIME ftWrite;
 
-  if (RegDeleteKey(hKeyRoot, pszSubKey) != ERROR_SUCCESS)
-  {
-    HINSTANCE hLibInst = LoadLibrary(_T("shlwapi.dll"));
+    // First, see if we can delete the key without having
+    // to recurse.
 
-    if (!hLibInst)
+    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
+
+    if (lResult == ERROR_SUCCESS)
+        return TRUE;
+
+    lResult = RegOpenKeyEx (hKeyRoot, lpSubKey, 0, KEY_READ, &hKey);
+
+    if (lResult != ERROR_SUCCESS)
     {
-      //throw ERROR_NO_SHLWAPI_DLL;
+        if (lResult == ERROR_FILE_NOT_FOUND) {
+            printf("Key not found.\n");
+            return TRUE;
+        }
+        else {
+            printf("Error opening key.\n");
+            return FALSE;
+        }
     }
 
-    typedef DWORD(__stdcall* SHDELKEYPROC)(HKEY, LPCTSTR);
+    // Check for an ending slash and add one if it is missing.
 
-#if defined(UNICODE) || defined(_UNICODE)
-    SHDELKEYPROC DeleteKeyRecursive = (SHDELKEYPROC)GetProcAddress(hLibInst, "SHDeleteKeyW");
-#else
-    SHDELKEYPROC DeleteKeyRecursive = (SHDELKEYPROC)GetProcAddress(hLibInst, "SHDeleteKeyA");
-#endif
+    lpEnd = lpSubKey + lstrlen(lpSubKey);
 
-    if (!DeleteKeyRecursive)
+    if (*(lpEnd - 1) != TEXT('\\'))
     {
-      FreeLibrary(hLibInst);
-      return false;
+        *lpEnd =  TEXT('\\');
+        lpEnd++;
+        *lpEnd =  TEXT('\0');
     }
 
-    dwRet = DeleteKeyRecursive(hKeyRoot, pszSubKey);
+    // Enumerate the keys
 
-    FreeLibrary(hLibInst);
-  }
+    dwSize = MAX_PATH;
+    lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
+                           NULL, NULL, &ftWrite);
 
-  if (dwRet == ERROR_SUCCESS)
-    return true;
+    if (lResult == ERROR_SUCCESS)
+    {
+        do {
 
-  SetLastError(dwRet);
-  return false;
+            *lpEnd = TEXT('\0');
+            //StringCchCat(lpSubKey, MAX_PATH * 2, szName);
+            _tcscat(lpSubKey, szName);
+
+            if (!RegDelnodeRecurse(hKeyRoot, lpSubKey)) {
+                break;
+            }
+
+            dwSize = MAX_PATH;
+
+            lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
+                                   NULL, NULL, &ftWrite);
+
+        } while (lResult == ERROR_SUCCESS);
+    }
+
+    lpEnd--;
+    *lpEnd = TEXT('\0');
+
+    RegCloseKey (hKey);
+
+    // Try again to delete the key.
+
+    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
+
+    if (lResult == ERROR_SUCCESS)
+        return TRUE;
+
+    return FALSE;
+}
+
+bool RegDelnode (HKEY hKeyRoot, LPCTSTR lpSubKey)
+{
+    TCHAR szDelKey[MAX_PATH*2];
+
+    //StringCchCopy (szDelKey, MAX_PATH*2, lpSubKey);
+    _tcscat(szDelKey, lpSubKey);
+    return RegDelnodeRecurse(hKeyRoot, szDelKey);
+
 }
