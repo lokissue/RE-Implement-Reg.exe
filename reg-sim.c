@@ -9,7 +9,8 @@ Supported value data types: string(REG_SZ), binary(REG_BINARY), dword(REG_DWORD)
 Reference from:
 https://docs.microsoft.com/en-us/windows/win32/sysinfo/enumerating-registry-subkeys
 https://docs.microsoft.com/en-us/windows/win32/sysinfo/deleting-a-key-with-subkeys
-Some materials from stackoverflow.com and tenouk.com
+https://www.tenouk.com/cpluscodesnippet/createregistrysubkeysnamesvalues.html
+Some materials from stackoverflow.com
 
 @Author: Luoming Zhang
 */
